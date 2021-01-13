@@ -4,9 +4,14 @@ body {
     "Helvetica Neue", sans-serif;
   margin: 0 auto;
   padding: 20px;
-  max-width: 500px;
+  max-width: 600px;
   font-size: 16px;
   line-height: 26px;
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: inherit;
 }
 
 button,
@@ -33,12 +38,17 @@ button {
 textarea {
   border: none;
   padding: 5px;
-  width: 500px;
+  width: 600px;
 }
 
 input {
   border: none;
-  width: 500px;
+  width: 600px;
   padding: 3px;
   margin-bottom: 2px;
+}
+
+.placeholder {
+  background-color: aliceblue;
+  padding: 10px;
 }

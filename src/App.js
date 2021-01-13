@@ -3,7 +3,8 @@ import React, {
   useRef,
   useState,
   createContext,
-  useContext
+  useContext,
+  Fragment
 } from "react";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
@@ -72,7 +73,7 @@ function useFocusWrapper({ height }) {
     if (focused) {
       setSelectedControl(id);
     }
-  }, [focused]);
+  }, [id, focused, setSelectedControl]);
 
   useEffect(() => {
     setMounted(true);
@@ -115,14 +116,15 @@ function FocusModeWrapper({
   });
 
   return (
-    <div>
+    <Fragment>
       {createPortal(
         <animated.div
           ref={popperRef}
           style={{
             ...style,
             ...styles.popper,
-            display: mounted ? "block" : "none"
+            display: mounted ? "block" : "none",
+            zIndex: 100
           }}
           {...attributes.popper}
         >
@@ -131,8 +133,15 @@ function FocusModeWrapper({
         document.querySelector("#app-opacity-portal")
       )}
 
-      <div style={{ width: "100%", height: height }} ref={referenceRef} />
-    </div>
+      <div
+        className="placeholder"
+        style={{
+          width: "100%",
+          height: height
+        }}
+        ref={referenceRef}
+      />
+    </Fragment>
   );
 }
 
@@ -168,7 +177,7 @@ function FocusModeProvider({ children }) {
 }
 
 function Page() {
-  const focusWrapperProps1 = useFocusWrapper({ height: 88 });
+  const focusWrapperProps1 = useFocusWrapper({ height: 105 });
   const focusWrapperProps2 = useFocusWrapper({ height: 32 });
 
   return (
