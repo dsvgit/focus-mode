@@ -52,6 +52,7 @@ input {
 
 .helperClass {
   z-index: 101;
+  opacity: 0.5;
 }
 
 .overlay {
@@ -68,7 +69,8 @@ input {
   display: flex;
 }
 
-.componentContainer:hover > .component {
+.componentContainer:hover > .component,
+.helperClass .component {
   background-color: rgb(135, 206, 250, 0.2);
 }
 

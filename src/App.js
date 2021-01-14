@@ -6,6 +6,7 @@ import React, {
   useContext,
   Fragment
 } from "react";
+import TextareaAutosize from "react-textarea-autosize";
 import { usePopper } from "react-popper";
 import { useSpring, animated } from "react-spring";
 import shortid from "shortid";
@@ -30,9 +31,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const AppOpacityContext = createContext();
 
-function useFocusWrapper({ height }) {
+function useFocusWrapper() {
   const [id] = useState(shortid.generate());
-  const offsetY = -height;
   const [mounted, setMounted] = useState(false);
   const [focused, setFocused] = useState(false);
 
@@ -60,16 +60,7 @@ function useFocusWrapper({ height }) {
 
   const popper = usePopper(referenceRef.current, popperRef.current, {
     placement: "top",
-    strategy: "absolute",
-    modifiers: [
-      {
-        name: "offset",
-        enabled: true,
-        options: {
-          offset: [0, offsetY]
-        }
-      }
-    ]
+    strategy: "absolute"
   });
   const { styles, attributes, update } = popper;
 
@@ -96,7 +87,6 @@ function useFocusWrapper({ height }) {
     mounted,
     setFocusedInterval,
     clearFocusedInterval,
-    height,
     popperRef,
     referenceRef,
     styles,
@@ -108,15 +98,27 @@ function useFocusWrapper({ height }) {
 function FocusModeWrapper({
   id,
   mounted,
-  height,
   popperRef,
   referenceRef,
   styles,
   attributes,
   children
 }) {
-  const { selectedControl, focusModeActive } = useContext(AppOpacityContext);
+  const { selectedControl, focusModeActive, focusModeSet } = useContext(
+    AppOpacityContext
+  );
   const popperActive = focusModeActive && selectedControl === id;
+
+  const style = useSpring({
+    to: async (next, cancel) => {
+      focusModeSet && selectedControl === id && (await delay(1000));
+      await next({
+        transform:
+          focusModeSet && selectedControl === id ? `scale(1.05)` : `scale(1)`
+      });
+    },
+    from: { transform: `scale(1)` }
+  });
 
   return (
     <Fragment>
@@ -124,7 +126,7 @@ function FocusModeWrapper({
         className="placeholder"
         style={{
           width: "100%",
-          height: popperActive ? height : "auto"
+          height: popperActive ? popperRef?.current?.offsetHeight : "auto"
         }}
         ref={referenceRef}
       >
@@ -134,7 +136,8 @@ function FocusModeWrapper({
             ...(popperActive ? styles.popper : {}),
             width: "100%",
             display: mounted ? "block" : "none",
-            zIndex: 101
+            zIndex: 101,
+            ...style
           }}
           {...attributes.popper}
         >
@@ -149,13 +152,17 @@ function FocusModeProvider({ children }) {
   const [selectedControl, setSelectedControl] = useState(null);
   const [focusModeEnabled, setFocusModeEnabled] = useState(false);
   const [focusModeActive, setFocusModeActive] = useState(false);
+  const [focusModeSet, setFocusModeSet] = useState(false);
   const opacity = focusModeEnabled ? 1 : 0;
 
   const style = useSpring({
     to: async (next, cancel) => {
-      focusModeEnabled && setFocusModeActive(true);
+      !focusModeEnabled && setFocusModeSet(false);
+
       focusModeEnabled && (await delay(1000));
+      focusModeEnabled && setFocusModeActive(true);
       await next({ opacity, config: { duration: 500 } });
+      focusModeEnabled && setFocusModeSet(true);
       !focusModeEnabled && setFocusModeActive(false);
     },
     from: { opacity }
@@ -166,6 +173,7 @@ function FocusModeProvider({ children }) {
       value={{
         focusModeActive,
         focusModeEnabled,
+        focusModeSet,
         setFocusModeEnabled,
         selectedControl,
         setSelectedControl,
@@ -191,16 +199,17 @@ function Component({ children }) {
 }
 
 function Page() {
-  const focusWrapperProps1 = useFocusWrapper({ height: 95 });
-  const focusWrapperProps2 = useFocusWrapper({ height: 30 });
+  const focusWrapperProps1 = useFocusWrapper();
+  const focusWrapperProps2 = useFocusWrapper();
 
   const elements = [
     <Component>
-      <h1>This is the focus mode text area.</h1>
+      <h1>One morning</h1>
     </Component>,
     <Component>
       <FocusModeWrapper {...focusWrapperProps1}>
-        <textarea
+        <TextareaAutosize
+          defaultValue={`One morning, when Gregor Samsa woke from troubled dreams, he found himself transformed in his bed into a horrible vermin. He lay on his armour-like back, and if he lifted his head a little he could see his brown belly, slightly domed and divided by arches into stiff sections. The bedding was hardly able to cover it and seemed ready to slide off any moment. His many legs, pitifully thin compared with the size of the rest of him, waved about helplessly as he looked. "What's happened to me? " he thought. It wasn't a dream.`}
           placeholder="Click here to start writing..."
           rows={3}
           onFocus={() => focusWrapperProps1.setFocusedInterval()}
@@ -209,11 +218,24 @@ function Page() {
       </FocusModeWrapper>
     </Component>,
     <Component>
-      <h1>This is the focus mode input.</h1>
+      <h1>His room</h1>
+    </Component>,
+    <Component>
+      <p>
+        His room, a proper human room although a little too small, lay
+        peacefully between its four familiar walls. A collection of textile
+        samples lay spread out on the table - Samsa was a travelling salesman -
+        and above it there hung a picture that he had recently cut out of an
+        illustrated magazine and housed in a nice, gilded frame. It showed a
+        lady fitted out with a fur hat and fur boa who sat upright, raising a
+        heavy fur muff that covered the whole of her lower arm towards the
+        viewer. Gregor then turned to look out the window at the dull weather.
+      </p>
     </Component>,
     <Component>
       <FocusModeWrapper {...focusWrapperProps2}>
         <input
+          defaultValue="His room, a proper human room although a little too small, lay peacefully between its four familiar walls."
           placeholder="or here..."
           onFocus={() => focusWrapperProps2.setFocusedInterval()}
           onBlur={() => focusWrapperProps2.clearFocusedInterval()}
