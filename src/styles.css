@@ -55,6 +55,11 @@ input {
   opacity: 0.5;
 }
 
+.helperClass .handle {
+  pointer-events: auto;
+  cursor: grabbing !important;
+}
+
 .overlay {
   position: fixed;
   top: 0;

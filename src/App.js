@@ -251,19 +251,17 @@ function Page() {
   }
 
   return (
-    <div>
-      <SortableContainer
-        helperClass="helperClass"
-        onSortEnd={onSortEnd}
-        useDragHandle={true}
-      >
-        {order.map((id, index) => (
-          <SortableItem key={id} index={index}>
-            {elements[id]}
-          </SortableItem>
-        ))}
-      </SortableContainer>
-    </div>
+    <SortableContainer
+      helperClass="helperClass"
+      onSortEnd={onSortEnd}
+      useDragHandle={true}
+    >
+      {order.map((id, index) => (
+        <SortableItem key={id} index={index}>
+          {elements[id]}
+        </SortableItem>
+      ))}
+    </SortableContainer>
   );
 }
 
