@@ -11,7 +11,7 @@ body {
 }
 
 * {
-  box-sizing: inherit;
+  box-sizing: border-box;
 }
 
 button,
@@ -24,6 +24,7 @@ input {
 textarea,
 input {
   line-height: inherit;
+  width: 100%;
 }
 
 section {
@@ -38,17 +39,47 @@ button {
 textarea {
   border: none;
   padding: 5px;
-  width: 600px;
 }
 
 input {
   border: none;
-  width: 600px;
-  padding: 3px;
   margin-bottom: 2px;
 }
 
 .placeholder {
-  background-color: aliceblue;
+  position: relative;
+}
+
+.helperClass {
+  z-index: 101;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 100;
+  background-color: white;
+}
+
+.componentContainer {
+  display: flex;
+}
+
+.componentContainer:hover > .component {
+  background-color: rgb(135, 206, 250, 0.2);
+}
+
+.component {
+  width: 100%;
+  padding: 15px;
+}
+
+.handle {
+  display: block;
+  cursor: pointer;
   padding: 10px;
+  align-self: center;
 }

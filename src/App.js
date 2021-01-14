@@ -6,12 +6,25 @@ import React, {
   useContext,
   Fragment
 } from "react";
-import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { useSpring, animated } from "react-spring";
 import shortid from "shortid";
-import "./styles.css";
+import arrayMove from "array-move";
+import {
+  sortableContainer,
+  sortableElement,
+  sortableHandle
+} from "react-sortable-hoc";
 import useEventListener from "./useEventListener";
+import "./styles.css";
+
+const DragHandle = sortableHandle(() => <div className="handle">::</div>);
+
+const SortableItem = sortableElement(({ children }) => <div>{children}</div>);
+
+const SortableContainer = sortableContainer(({ children }) => {
+  return <div>{children}</div>;
+});
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -23,7 +36,9 @@ function useFocusWrapper({ height }) {
   const [mounted, setMounted] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  const { setAppOpacity, setSelectedControl } = useContext(AppOpacityContext);
+  const { setFocusModeEnabled, setSelectedControl } = useContext(
+    AppOpacityContext
+  );
 
   const intervalRef = useRef(null);
 
@@ -43,31 +58,28 @@ function useFocusWrapper({ height }) {
   const referenceRef = useRef(null);
   const popperRef = useRef(null);
 
-  const { styles, attributes } = usePopper(
-    referenceRef.current,
-    popperRef.current,
-    {
-      placement: "top",
-      strategy: "fixed",
-      modifiers: [
-        {
-          name: "offset",
-          enabled: true,
-          options: {
-            offset: [0, offsetY]
-          }
+  const popper = usePopper(referenceRef.current, popperRef.current, {
+    placement: "top",
+    strategy: "absolute",
+    modifiers: [
+      {
+        name: "offset",
+        enabled: true,
+        options: {
+          offset: [0, offsetY]
         }
-      ]
-    }
-  );
+      }
+    ]
+  });
+  const { styles, attributes, update } = popper;
 
   useEventListener(document, "mousemove", () => {
     setFocused(false);
   });
 
   useEffect(() => {
-    setAppOpacity(focused ? 0 : 1);
-  }, [focused, setAppOpacity]);
+    setFocusModeEnabled(focused);
+  }, [focused, setFocusModeEnabled]);
 
   useEffect(() => {
     if (focused) {
@@ -88,7 +100,8 @@ function useFocusWrapper({ height }) {
     popperRef,
     referenceRef,
     styles,
-    attributes
+    attributes,
+    update
   };
 }
 
@@ -102,87 +115,90 @@ function FocusModeWrapper({
   attributes,
   children
 }) {
-  const { selectedControl, appOpacity: _appOpacity } = useContext(
-    AppOpacityContext
-  );
-  const appOpacity = selectedControl === id ? 1 : _appOpacity;
-
-  const style = useSpring({
-    to: async (next, cancel) => {
-      appOpacity !== 1 && (await delay(1000));
-      await next({ opacity: appOpacity, config: { duration: 500 } });
-    },
-    from: { opacity: appOpacity }
-  });
+  const { selectedControl, focusModeActive } = useContext(AppOpacityContext);
+  const popperActive = focusModeActive && selectedControl === id;
 
   return (
     <Fragment>
-      {createPortal(
-        <animated.div
-          ref={popperRef}
-          style={{
-            ...style,
-            ...styles.popper,
-            display: mounted ? "block" : "none",
-            zIndex: 100
-          }}
-          {...attributes.popper}
-        >
-          {children}
-        </animated.div>,
-        document.querySelector("#app-opacity-portal")
-      )}
-
       <div
         className="placeholder"
         style={{
           width: "100%",
-          height: height
+          height: popperActive ? height : "auto"
         }}
         ref={referenceRef}
-      />
+      >
+        <animated.div
+          ref={popperRef}
+          style={{
+            ...(popperActive ? styles.popper : {}),
+            width: "100%",
+            display: mounted ? "block" : "none",
+            zIndex: 101
+          }}
+          {...attributes.popper}
+        >
+          {children}
+        </animated.div>
+      </div>
     </Fragment>
   );
 }
 
 function FocusModeProvider({ children }) {
   const [selectedControl, setSelectedControl] = useState(null);
-  const [appOpacity, setAppOpacity] = useState(1);
+  const [focusModeEnabled, setFocusModeEnabled] = useState(false);
+  const [focusModeActive, setFocusModeActive] = useState(false);
+  const opacity = focusModeEnabled ? 1 : 0;
 
   const style = useSpring({
     to: async (next, cancel) => {
-      appOpacity !== 1 && (await delay(1000));
-      await next({ opacity: appOpacity, config: { duration: 500 } });
+      focusModeEnabled && setFocusModeActive(true);
+      focusModeEnabled && (await delay(1000));
+      await next({ opacity, config: { duration: 500 } });
+      !focusModeEnabled && setFocusModeActive(false);
     },
-    from: { opacity: appOpacity }
+    from: { opacity }
   });
-
-  useEffect(() => {
-    setAppOpacity(1);
-  }, []);
 
   return (
     <AppOpacityContext.Provider
       value={{
-        appOpacity,
-        setAppOpacity,
+        focusModeActive,
+        focusModeEnabled,
+        setFocusModeEnabled,
         selectedControl,
         setSelectedControl,
         style
       }}
     >
-      <animated.div style={style}>{children}</animated.div>
+      <animated.div
+        style={{ ...style, display: focusModeActive ? "block" : "none" }}
+        className="overlay"
+      />
+      <div>{children}</div>
     </AppOpacityContext.Provider>
   );
 }
 
-function Page() {
-  const focusWrapperProps1 = useFocusWrapper({ height: 105 });
-  const focusWrapperProps2 = useFocusWrapper({ height: 32 });
-
+function Component({ children }) {
   return (
-    <div>
+    <div className="componentContainer">
+      <DragHandle />
+      <div className="component">{children}</div>
+    </div>
+  );
+}
+
+function Page() {
+  const focusWrapperProps1 = useFocusWrapper({ height: 95 });
+  const focusWrapperProps2 = useFocusWrapper({ height: 30 });
+
+  const elements = [
+    <Component>
       <h1>This is the focus mode text area.</h1>
+    </Component>,
+    <Component>
       <FocusModeWrapper {...focusWrapperProps1}>
         <textarea
           placeholder="Click here to start writing..."
@@ -191,8 +207,11 @@ function Page() {
           onBlur={() => focusWrapperProps1.clearFocusedInterval()}
         />
       </FocusModeWrapper>
-
+    </Component>,
+    <Component>
       <h1>This is the focus mode input.</h1>
+    </Component>,
+    <Component>
       <FocusModeWrapper {...focusWrapperProps2}>
         <input
           placeholder="or here..."
@@ -200,6 +219,28 @@ function Page() {
           onBlur={() => focusWrapperProps2.clearFocusedInterval()}
         />
       </FocusModeWrapper>
+    </Component>
+  ];
+
+  const [order, setOrder] = useState(elements.map((_, index) => index));
+
+  function onSortEnd({ oldIndex, newIndex }) {
+    setOrder((items) => arrayMove(items, oldIndex, newIndex));
+  }
+
+  return (
+    <div>
+      <SortableContainer
+        helperClass="helperClass"
+        onSortEnd={onSortEnd}
+        useDragHandle={true}
+      >
+        {order.map((id, index) => (
+          <SortableItem key={id} index={index}>
+            {elements[id]}
+          </SortableItem>
+        ))}
+      </SortableContainer>
     </div>
   );
 }
